@@ -1,0 +1,156 @@
+/*  Left servo will open entry gate. It will not rotates untill distance of obastacle is less than 200cm.
+    After that, for putting order you have to press keys 1,2,3,4 (1-red LED, 2- blue LED and so) from IR remote.
+    I am assuming here after 3s of putting order it will be delivered, and so corresponding LED will glow 
+    for 3s. After that if distance of obstacle from right US sensor is less than 200cm right gate will open.
+    Program does not proceed further untill exit gate closes, so only single person can be inside at a time(social distancing);
+*/
+
+#include<Servo.h>
+#include<IRremote.h>               
+Servo servo_1;                    //defining servo objects
+Servo servo_2; 
+int ir_1_pin=2, ir_2_pin=3, ir_3_pin=4, ir_4_pin=5;     //defining IR out pins connected to auduino digital ports 
+int led_r=8, led_b=9, led_g=10, led_y=7;                //defining LEDs connected to auduino digital ports
+int pin1, pin2, pin3, pin4;                             //variables stores value LOW or HIGH for corresponding IR sensor
+int servo_1_pin=11, servo_2_pin=6;                      //defines pin no. to which signal pin of servo connects to auduino
+int us_1=12, us_2=13;                                   //defines pin no. to which signal pin of us sensor connect to arduino
+float distance1, distance2;                //variables for storing distance from us sensor 1 and 2 respectively
+IRrecv ir_1(ir_1_pin);         
+IRrecv ir_2(ir_2_pin);                     //pin definitions
+IRrecv ir_3(ir_3_pin);
+IRrecv ir_4(ir_4_pin);
+decode_results results;
+
+long us_sensor(int trig_pin, int echo_pin);    //function which returns time in microseconds using us sensor
+void setup()
+{
+  Serial.begin(9600);
+  ir_1.enableIRIn();                         //Enabling all IR sensors
+  ir_2.enableIRIn();
+  ir_3.enableIRIn();
+  ir_4.enableIRIn();
+  servo_1.attach(servo_1_pin);               //attaching servo objects to corresponding servo signal pin
+  servo_2.attach(servo_2_pin);
+  pinMode(led_r,OUTPUT);
+  pinMode(led_b,OUTPUT);
+  pinMode(led_g,OUTPUT);                     //declaring pinMode of LEDs
+  pinMode(led_y,OUTPUT);
+  servo_1.write(0);
+  servo_2.write(0);                          //keeps both servos at 0 degrees
+}
+
+void loop()
+{
+
+  pin1 =HIGH;                            //These are variables, which links with
+  pin2 =HIGH;                            //each IR sensor. It is default set to high
+  pin3 =HIGH;                            //if encounters any obstacle they will become LOW 
+  pin4 =HIGH;                            
+  
+  
+  
+  distance1 =  us_sensor(us_1,us_1)/43.0;    //calculate distance in cm(divided by 43 because this was matching with sensor value)
+  while(distance1>200)
+  {                                          //does not proceed the program untill distance is less than 200cm
+    distance1 =  us_sensor(us_1,us_1)/43.0;
+  }
+  
+    servo_1.write(90);                        //rotates the servo_1 to 90 degrees
+    delay(5000);                              //stay their for 5s
+    servo_1.write(0);                         //again come back to 0 degree
+ 
+  
+  if(ir_1.decode(&results))                    //Here if IR sensor 1 senses IR remote code
+  {                                            //corresponding to digit 1 pin1 becomes LOW
+    if(results.value == 0xFD08F7)
+    {
+      Serial.println("Customer has ordered item corresponding to red led");  //prints on serial monitor
+      pin1 = LOW;
+      ir_1.resume();
+    }
+  }
+  
+  if(ir_2.decode(&results))                      
+  {
+    if(results.value == 0xFD8877)                         //if IR sensor 2 senses IR remote code
+    {                                                     //corresponding to digit 2 pin2 becomes LOW
+      Serial.println("Customer has ordered item corresponding to blue led");    //prints on serial monitor
+      pin2 = LOW;
+      ir_2.resume();
+    }
+  }
+  
+  if(ir_3.decode(&results))
+  {
+    if(results.value == 0xFD48B7)                         //if IR sensor 3 senses IR remote code corresponding 
+    {                                                     //to digit 3 pin3 becomes LOW
+      Serial.println("Customer has ordered item corresponding to green led");   //prints on serial monitor
+      pin3 = LOW;
+      ir_3.resume();
+    }
+  }
+  
+  if(ir_4.decode(&results))
+  {
+    if(results.value == 0xFD28D7)                        //if IR sensor 4 senses IR remote code corresponding 
+    {                                                    //digit 4 pin4 becomes LOW
+      Serial.println("Customer has ordered item corresponding to yellow led");  //prints on serisl monitor
+      pin4 = LOW;
+      ir_4.resume();
+      
+    }
+  }
+  
+  if(pin1==LOW)
+  {
+    delay(3000);
+    digitalWrite(led_r,HIGH);            //if pin1 is LOW red LED glows for 3s
+    delay(3000);
+    digitalWrite(led_r,LOW);
+  }
+  
+  if(pin2==LOW)
+  {
+    delay(3000);
+    digitalWrite(led_b,HIGH);            //if pin2 is LOW blue LED glows for 3s
+    delay(3000);
+    digitalWrite(led_b,LOW);
+  }
+  if(pin3==LOW)
+  {
+    delay(3000);
+    digitalWrite(led_g,HIGH);            //pin3 is LOW green LED glows for 3s
+    delay(3000);
+    digitalWrite(led_g,LOW);
+  }
+  if(pin4==LOW)
+  {
+    delay(3000);
+    digitalWrite(led_y,HIGH);            //if pin4 is LOW yellow LED glows for 3s
+    delay(3000);
+    digitalWrite(led_y,LOW);
+  }
+  distance2 =  us_sensor(us_2,us_2)/43.0;     //calculate distance in cm(divided by 43 because this only was matching with sensor value)
+  while(distance2>200)
+  {
+    distance2 =  us_sensor(us_2,us_2)/43.0;   //does not proceed untill distance becomes less than 200cm
+  }
+  
+    servo_2.write(90);                         //rotates the servo_2 by 90 degrees
+    delay(5000);                               //stay their for 5s
+    servo_2.write(0);                          //again come back to 0 degree
+  
+}
+  
+long us_sensor(int trig_pin, int echo_pin)     //returns time of travel of IR radiation 
+{
+  pinMode(trig_pin,OUTPUT);
+  
+  digitalWrite(trig_pin,LOW);
+  delayMicroseconds(2);
+  digitalWrite(trig_pin,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trig_pin,LOW);
+  pinMode(echo_pin,INPUT);
+  return pulseIn(echo_pin,HIGH);
+}
